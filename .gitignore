@@ -18,3 +18,6 @@ venv/
 Thumbs.db
 .vscode/
 .idea/
+
+# Simulyator yaratgan ma'lumotlar
+data/*.csv
