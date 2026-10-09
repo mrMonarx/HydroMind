@@ -1,0 +1,8 @@
+# 1-qadam: asosiy kutubxonalar. Keyingi qadamlarda (ML, dashboard) qo'shiladi.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+pydantic>=2.6
+pandas>=2.0
+numpy>=1.26
+python-dotenv>=1.0
