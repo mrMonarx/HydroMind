@@ -6,3 +6,7 @@ pydantic>=2.6
 pandas>=2.0
 numpy>=1.26
 python-dotenv>=1.0
+
+# 4-qadam: tahlil va vizualizatsiya
+matplotlib>=3.8
+jupyterlab>=4.0

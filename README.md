@@ -9,7 +9,8 @@ Holat: ishlab chiqish boshlang'ich bosqichida.
 hydromind-agro/
   backend/app/      FastAPI server (ma'lumot qabul qilish, API)
   scripts/          check_env.py (muhit tekshiruvi), simulator.py (sensor simulyatori)
-  data/             simulyator yaratgan CSV fayllar (GitHub'ga yuklanmaydi)
+  notebooks/        tahlil notebook'lari (04_eda_va_tozalash.ipynb)
+  data/             simulyator va tahlil yaratgan CSV fayllar (GitHub'ga yuklanmaydi)
   docs/             hujjatlar
   requirements.txt  Python kutubxonalari
   .env.example      sozlamalar namunasi
@@ -96,3 +97,23 @@ serverni to'xtatib, `hydromind.db` ni o'chiring.
 
 CSV dagi `valve_open` va `is_anomaly` ustunlari faqat simulyatorda bor (haqiqiy tizimda ular noma'lum bo'ladi),
 ular keyingi qadamlarda tahlil va modelni tekshirish uchun "to'g'ri javob" vazifasini bajaradi.
+
+## Ma'lumot tahlili (4-qadam)
+
+Notebook: `notebooks/04_eda_va_tozalash.ipynb`. Sensor xatolarini topadi va tuzatadi, sug'orish hodisalarini ajratib oladi,
+zonalarni solishtiradi, quruyish tezligini harorat/namlik/soat bilan bog'laydi va qurilma batareyasini kuzatadi.
+
+Tayyorgarlik (yangi kutubxonalar uchun bir marta): `pip install -r requirements.txt`
+
+Natijani "to'g'ri javob" bilan tekshirish uchun bazani CSV bilan birga to'ldiring (oldin `hydromind.db` ni o'chiring):
+```bash
+python scripts/simulator.py backfill --days 30 --csv data/sim.csv
+```
+
+Ochish (venv aktiv, loyiha papkasida):
+```bash
+jupyter lab
+```
+yoki VS Code'da `.ipynb` faylni ochib, kernel sifatida `.venv` ni tanlang. Keyin yuqoridan pastga hamma katakni ishga tushiring (Run All).
+
+Natija: `data/clean_readings.csv` (tozalangan ma'lumot) va `data/irrigation_events.csv` (sug'orish hodisalari). Ular 5-qadamda (ML) ishlatiladi.

@@ -3,7 +3,7 @@ import importlib
 import sys
 
 MIN_PYTHON = (3, 10)
-PACKAGES = ["fastapi", "uvicorn", "sqlalchemy", "pydantic", "pandas", "numpy", "dotenv"]
+PACKAGES = ["fastapi", "uvicorn", "sqlalchemy", "pydantic", "pandas", "numpy", "dotenv", "matplotlib", "ipykernel"]
 
 
 def main() -> int:
