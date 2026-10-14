@@ -1,6 +1,10 @@
+import os
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Annotated
+
+import pandas as pd
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Query
 from sqlalchemy import select
@@ -8,6 +12,22 @@ from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .database import Base, engine, get_db
+from .ml.config import ZONES
+from .ml.model import MoistureForecaster
+from .ml.service import build_recommendation
+
+MODEL_PATH = Path(os.getenv("MODEL_PATH", "models/moisture_model.joblib"))
+_model_cache: dict = {"mtime": None, "model": None}
+
+
+def get_forecaster() -> MoistureForecaster | None:
+    """Modelni yuklaydi (fayl yangilansa, serverni qayta ishga tushirmasdan qayta yuklaydi)."""
+    if not MODEL_PATH.exists():
+        return None
+    mtime = MODEL_PATH.stat().st_mtime
+    if _model_cache["mtime"] != mtime:
+        _model_cache.update(mtime=mtime, model=MoistureForecaster.load(MODEL_PATH))
+    return _model_cache["model"]
 
 
 @asynccontextmanager
@@ -20,7 +40,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="HydroMind Agro API",
     description="Sug'orish ma'lumotlari va tavsiyalar uchun backend",
-    version="0.3.0",
+    version="0.5.0",
     lifespan=lifespan,
 )
 
@@ -86,3 +106,37 @@ def latest_for_zone(zone_id: str, db: Session = Depends(get_db)):
     if reading is None:
         raise HTTPException(status_code=404, detail=f"'{zone_id}' zonasi uchun ma'lumot topilmadi")
     return reading
+
+
+@app.get("/zones/{zone_id}/recommendation", response_model=schemas.RecommendationOut, tags=["zones"])
+def recommendation(
+    zone_id: str,
+    autonomy: int = Query(default=0, ge=0, le=2, description="0: hammasi tasdiq bilan, 1: low xavf avtomatik, 2: low+medium avtomatik"),
+    as_of: datetime | None = Query(default=None, description="Shu vaqt holatida tavsiya olish (UTC). Demo/tekshiruv uchun; ko'rsatilmasa, hozir."),
+    db: Session = Depends(get_db),
+):
+    """ML prognozi + xavfsizlik qoidalari asosida zonaga sug'orish tavsiyasi."""
+    cfg = ZONES.get(zone_id)
+    if cfg is None:
+        raise HTTPException(status_code=404, detail=f"'{zone_id}' zonasi uchun sozlama topilmadi (backend/app/ml/config.py)")
+
+    now = schemas.to_utc_naive(as_of) if as_of else models.utcnow()
+    stmt = (
+        select(models.Reading)
+        .where(models.Reading.zone_id == zone_id, models.Reading.timestamp >= now - timedelta(hours=48),
+               models.Reading.timestamp <= now)
+        .order_by(models.Reading.timestamp)
+    )
+    rows = db.scalars(stmt).all()
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"'{zone_id}' zonasi uchun so'nggi 48 soatda ma'lumot yo'q")
+
+    raw = pd.DataFrame([{
+        "zone_id": r.zone_id, "timestamp": r.timestamp, "soil_moisture_pct": r.soil_moisture_pct,
+        "soil_temp_c": r.soil_temp_c, "air_temp_c": r.air_temp_c, "air_humidity_pct": r.air_humidity_pct,
+    } for r in rows])
+    raw["timestamp"] = raw["timestamp"].astype("datetime64[ns]")
+
+    result = build_recommendation(raw, cfg, pd.Timestamp(now), get_forecaster(), autonomy)
+    result["as_of"] = now.replace(tzinfo=timezone.utc)
+    return result

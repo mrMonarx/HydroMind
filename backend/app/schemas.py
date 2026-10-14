@@ -1,6 +1,8 @@
 """API orqali kiruvchi va chiquvchi ma'lumot shakllari (validatsiya bilan)."""
 from datetime import datetime, timezone
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -52,3 +54,24 @@ class ReadingOut(BaseModel):
 
 class BulkResult(BaseModel):
     inserted: int
+
+
+class ForecastPoint(BaseModel):
+    hours: int
+    moisture: float = Field(description="Prognoz qilingan namlik (%), sug'orilmasa")
+    moisture_low: float = Field(description="Pessimistik prognoz (model xatosi ayirilgan)")
+
+
+class RecommendationOut(BaseModel):
+    zone_id: str
+    as_of: datetime
+    current_moisture: float | None
+    data_age_min: float | None
+    action: Literal["irrigate", "wait", "alert"]
+    minutes: int
+    risk: Literal["low", "medium", "high"]
+    requires_confirmation: bool
+    reasons: list[str]
+    hours_to_threshold: float | None
+    forecast: list[ForecastPoint]
+    model_used: bool

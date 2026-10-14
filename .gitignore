@@ -21,3 +21,6 @@ Thumbs.db
 
 # Simulyator yaratgan ma'lumotlar
 data/*.csv
+
+# O'qitilgan model va uning hisoboti (har kim o'z ma'lumoti bilan o'qitadi)
+models/*.json
